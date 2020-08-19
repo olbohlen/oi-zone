@@ -1,7 +1,7 @@
 Role Name
 =========
 
-A brief description of the role goes here.
+This role is supposed to deploy a new OpenIndiana Zone on a yada...
 
 Requirements
 ------------

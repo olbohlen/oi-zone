@@ -1,0 +1,27 @@
+setup_timezone "{{ oizone['sysding']['timezone'] }}"
+setup_locale "{{ oizone['sysding']['locale'] }}"
+{% if oizone['sysding']['nfs4domain'] %}
+setup_nfs4domain "{{ oizone['sysding']['nfs4domain'] }}"
+{% endif %}
+
+{% for user in oizone['sysding']['users'] %}
+{% if user['name'] != "root" %}
+setup_user_account {{ user['name'] }} {{ user['uid'] }} {{ user['gid'] }} {{ user['gecos'] }} {{ user['home'] }} {{ user['shell'] }}
+mkdir -p {{ user['home'] }}
+chmod {{ user['name'] }}:{{ user['gid'] }} {{ user['home'] }}
+{% endif %}
+setup_user_password {{ user['name'] }} '{{ user["hashedpassword"] }}'
+{% endfor %}
+{% if oizone['iptype'] == "exclusive-ip" %}
+{% for nic in oizone['nics'] %}
+setup_interface {{ nic['logical'] }} {{ nic['addrsuffix'] }} {{ nic['address'] }}
+{% endfor %}
+{% endif %}
+
+{% for route in oizone['sysding']['ip']['routes'] %}
+setup_route {{ route['target'] }} {{ route['router'] }}
+{% endfor %}
+
+{% if oizone['sysding']['dns'] %}
+setup_ns_dns "{{ oizone['sysding']['dns']['domain'] }}" "{{ oizone['sysding']['dns']['search'] | join(' ') }}" "{{ oizone['sysding']['dns']['nameservers'] | join(' ') }}"
+{% endif %}
