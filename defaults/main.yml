@@ -1,72 +1,9 @@
 ---
 # defaults file for oi-zone
 oizone:
-  name: oizone
-  zoneroot: /export/zones/
   autoboot: "true"
-  bootargs: # -v
   iptype: exclusive
-  cpus: dedicated # dedicated or capped-cpu
-  ncpus: 1
-  mem: capped-memory # or nil
-  ram: 1G
-  swap: 1G
-  locked: 1G
   brand: ipkg
-  filesystems:
-    - path: /export/zones/oizone
-      type: zoneroot
-      zfscreate: true
-      zfs_extra_properties:
-        refquota: 10G
-    - path: apppool/oizone/datavol1
-      type: volume
-      zfscreate: true
-      zfs_extra_properties:
-        volsize: 5G
-    - path: apppool/oizone/dataset1
-      type: dataset
-      zfscreate: true
-      zfs_extra_properties:
-        quota: 2G
-    - path: /disk1
-      type: lofs
-      mountpoint: /hostdisks/disk1
-      zfscreate: false
-      options:
-        - ro
-        - nodevices
-  nics:
-    - physical: ixgbe0
-      logical: oizoneint0
-      vlan: 100
-      address: dhcp  # can be "dhcp" or a regular IP address
-      addrsuffix: v4 # can be a string, interface0/suffix will be the ipadm create-addr
-  kvm:
-    vnc: "on"
-    bootorder: cd
   sysding:
     timezone: UTC
     locale: C
-    ip:
-      routes:
-        - target: default # can be a CIDR or a host ip or "default"
-          router: 172.18.0.200 # IP of the router
-      dns:
-        nameservers:
-          - 1.1.1.1
-          - 8.8.8.8
-        search:
-          - example.com
-          - openindiana.org
-        domain: example.com
-    users:
-      - name: root
-        hashedpassword: "$5$foobar...."
-      - name: localadm
-        uid: 100
-        gid: 10
-        shell: /usr/bin/bash
-        gecos: "Local Admin Account"
-        home: /export/home/localadm
-        hashedpassword: "$5$barfoo...."

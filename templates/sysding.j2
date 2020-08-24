@@ -1,20 +1,25 @@
+# created by oi-zone ansible role
 setup_timezone {{ oizone['sysding']['timezone'] }}
 setup_locale {{ oizone['sysding']['locale'] }}
 
-{% if oizone['sysding']['nfs4domain'] %}
+{% if oizone['sysding']['nfs4domain'] is defined and oizone['sysding']['nfs4domain'] | length %}
 setup_nfs4domain "{{ oizone['sysding']['nfs4domain'] }}"
 {% endif %}
 
 {% for user in oizone['sysding']['users'] %}
 {% if user['name'] != "root" %}
-setup_user_account {{ user['name'] }} {{ user['uid'] }} {{ user['gid'] }} {{ user['gecos'] }} {{ user['home'] }} {{ user['shell'] }}
+setup_user_account {{ user['name'] }} {{ user['uid'] }} {{ user['gid'] }} "{{ user['gecos'] }}" "{{ user['home'] }}" "{{ user['shell'] }}"
 mkdir -p {{ user['home'] }}
-chmod {{ user['name'] }}:{{ user['gid'] }} {{ user['home'] }}
+{% if user['authorized_key'] is defined %}
+mkdir -p "{{ user['home'] }}/.ssh"
+echo "{{ user['authorized_key'] }}" > "{{ user['home'] }}/.ssh/authorized_keys"
+{% endif %}
+chown -R {{ user['name'] }}:{{ user['gid'] }} {{ user['home'] }}
 {% endif %}
 setup_user_password {{ user['name'] }} '{{ user["hashedpassword"] }}'
 {% endfor %}
 
-{% if oizone['iptype'] == "exclusive-ip" %}
+{% if oizone['iptype'] == "exclusive" %}
 {% for nic in oizone['nics'] %}
 setup_interface {{ nic['logical'] }} {{ nic['addrsuffix'] }} {{ nic['address'] }}
 {% endfor %}
@@ -24,6 +29,6 @@ setup_interface {{ nic['logical'] }} {{ nic['addrsuffix'] }} {{ nic['address'] }
 setup_route {{ route['target'] }} {{ route['router'] }}
 {% endfor %}
 
-{% if oizone['sysding']['ip']['dns'] %}
+{% if oizone['sysding']['ip']['dns'] is defined and oizone['sysding']['ip']['dns'] | length %}
 setup_ns_dns "{{ oizone['sysding']['ip']['dns']['domain'] }}" "{{ oizone['sysding']['ip']['dns']['search'] | join(' ') }}" "{{ oizone['sysding']['ip']['dns']['nameservers'] | join(' ') }}"
 {% endif %}

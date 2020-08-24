@@ -1,112 +1,155 @@
 ---
 # tasks file for oi-zone
-- name: create VNICs
-  dladm_vnic:
-    name: "{{ item['logical'] }}"
-    link: "{{ item['physical'] }}"
-    vlan: "{{ item['vlan'] }}"
-  loop: "{{ oizone['nics'] }}"
+- name: creating zone for you
+  block:
+    - name: create VNICs with VLAN
+      dladm_vnic:
+        name: "{{ item['logical'] }}"
+        link: "{{ item['physical'] }}"
+        vlan: "{{ item['vlan'] }}"
+      loop: "{{ oizone['nics'] }}"
+      when: item['vlan'] is defined
 
-- name: create filesystems
-  zfs:
-    name: "{{ item['path'] }}"
-    state: present
-    zfs_extra_properties: "{{ item['zfs_extra_properties'] }}"
-  loop: "{{ oizone['filesystems'] }}"
-  when: zfscreate
+    - name: create VNICs without VLAN
+      dladm_vnic:
+        name: "{{ item['logical'] }}"
+        link: "{{ item['physical'] }}"
+      loop: "{{ oizone['nics'] }}"
+      when: item['vlan'] is not defined
+
+    - name: create filesystems
+      zfs:
+        name: "{{ item['path'] }}"
+        state: present
+        extra_zfs_properties: "{{ item['extra_zfs_properties'] }}"
+      loop: "{{ oizone['filesystems'] }}"
+      when: item['zfscreate']
   
-- name: set up VM zones for master
-  solaris_zone:
-    name: "{{ oizone['name'] }}"
-    state: installed
-    path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
-    config: >
-      set brand={{ oizone['brand'] }};
-      set autoboot={{ oizone['autoboot'] }};
-      {% if oizone['bootargs'] %}
-      set bootargs={{ oizone['bootargs'] }};
-      {% endif %}
-      set ip-type={{ oizone['iptype'] }};
-      {% for nic in oizone['nics'] %}
-      add net;
-      set physical={{ nic['logical'] }};
-      {% if {{ oizone['iptype'] == "shared" %}
-      set address={{ nic['address'] }};
-      {% endif %}
-      end;
-      {% endfor %}
-      {% for disk in vmconfig[outer_item]['disks'] %}
-      add device;
-      set match="/dev/zvol/rdsk/localstripe/vm/{{ outer_item }}d{{ disk['instance'] }}";
-      end;
-      add attr;
-      set name="{{ disk['label'] }}";
-      set type="string";
-      set value="localstripe/vm/{{ outer_item }}d{{ disk['instance'] }}";
-      end;
-      {% endfor %}
-      {% if oizone['cpus'] == "dedicated" %}
-      add dedicated-cpu;
-      set ncpus={{ oizone['ncpus'] }};
-      end;
-      {% endif %}
-      {% if oizone['cpus'] == "capped-cpu" %}
-      add capped-cpu;
-      set ncpus={{ oizone['ncpus'] }};
-      end;
-      {% endif %}
-      {% if oizone['mem'] == "capped-memory" %}
-      add capped-memory;
-      set physical={{ oizone['ram'] }};
-      set swap={{ oizone['swap'] }};
-      set locked={{ oizone['locked'] }};
-      end;
-      {% endif %}
-      {% for dataset in oizone['filesystems'] %}
-      {% if dataset['type'] == "dataset" %}
-      add dataset;
-      set name={{ dataset['path'] }};
-      end;
-      {% endif %}
-      {% if dataset['type'] == "lofs" %}
-      add fs;
-      set special={{ dataset['path'] }};
-      set dir={{ dataset['mountpoint'] }};
-      set type="lofs";
-      {% for option in database['options'] %}
-      add options {{ option }};
-      {% endfor %}
-      end;
-      {% endif %}
-      {% if dataset['type'] == "volume" %}
-      add device;
-      set match=/dev/zvol/rdsk/{{ dataset['path'] }};
-      end;
-      {% endif %}
-      {% endfor %}
-      {% if oizone['brand'] == "kvm" %}
-      add attr;
-      set name="bootorder";
-      set type="string";
-      set value="{{ oizone['kvm']['bootorder'] }}";
-      add attr;
-      set name="vnc";
-      set type="string";
-      set value="{{ oizone['kvm']['vnc'] }}";
-      end;
-      add attr;
-      set name="vcpus";
-      set type="string";
-      set value="{{ oizone['ncpus'] }}";
-      end;
-      add attr;
-      set name="ram";
-      set type="string";
-      set value="{{ oizone['ram'] }}";
-      end;
-      {% endif %}
+    - name: set up VM zones for master
+      solaris_zone:
+        name: "{{ oizone['name'] }}"
+        state: installed
+        path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
+        config: >
+          set brand={{ oizone['brand'] }};
+          set autoboot={{ oizone['autoboot'] }};
+          {% if oizone['bootargs'] is defined and oizone['bootargs'] | length %}
+          set bootargs={{ oizone['bootargs'] }};
+          {% endif %}
+          set ip-type={{ oizone['iptype'] }};
+          {% for nic in oizone['nics'] %}
+          add net;
+          set physical={{ nic['logical'] }};
+          {% if oizone['iptype'] == "shared" %}
+          set address={{ nic['address'] }};
+          {% endif %}
+          end;
+          {% endfor %}
+          {% if oizone['cpus'] is defined and oizone['cpus'] == "dedicated" %}
+          add dedicated-cpu;
+          set ncpus={{ oizone['ncpus'] }};
+          end;
+          {% endif %}
+          {% if oizone['cpus'] is defined and oizone['cpus'] == "capped-cpu" %}
+          add capped-cpu;
+          set ncpus={{ oizone['ncpus'] }};
+          end;
+          {% endif %}
+          {% if oizone['mem'] is defined and oizone['mem'] == "capped-memory" %}
+          add capped-memory;
+          set physical={{ oizone['ram'] }};
+          set swap={{ oizone['swap'] }};
+          set locked={{ oizone['locked'] }};
+          end;
+          {% endif %}
+          {% for dataset in oizone['filesystems'] %}
+          {% if dataset['type'] == "dataset" %}
+          add dataset;
+          set name={{ dataset['path'] }};
+          end;
+          {% endif %}
+          {% if dataset['type'] == "lofs" %}
+          add fs;
+          set special={{ dataset['path'] }};
+          set dir={{ dataset['mountpoint'] }};
+          set type="lofs";
+          {% for option in database['options'] %}
+          add options {{ option }};
+          {% endfor %}
+          end;
+          {% endif %}
+          {% if dataset['type'] == "volume" %}
+          add device;
+          set match=/dev/zvol/rdsk/{{ dataset['path'] }};
+          end;
+          {% endif %}
+          {% endfor %}
+          {% if oizone['brand'] == "kvm" %}
+          add attr;
+          set name="bootorder";
+          set type="string";
+          set value="{{ oizone['kvm']['bootorder'] }}";
+          add attr;
+          set name="vnc";
+          set type="string";
+          set value="{{ oizone['kvm']['vnc'] }}";
+          end;
+          add attr;
+          set name="vcpus";
+          set type="string";
+          set value="{{ oizone['ncpus'] }}";
+          end;
+          add attr;
+          set name="ram";
+          set type="string";
+          set value="{{ oizone['ram'] }}";
+          end;
+          {% endif %}
 
-- name: create a sysding.conf
-  template:
-    dest: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}/root/etc/sysding.conf"
-    src: sysding.j2
+    - name: create a sysding.conf
+      template:
+        dest: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}/root/etc/sysding.conf"
+        src: sysding.j2
+        mode: 0400
+
+    - name: boot zone
+      solaris_zone:
+        name: "{{ oizone['name'] }}"
+        state: running
+        path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
+
+    - name: add zone to inventory
+      local_action:
+        module: lineinfile
+        path: "{{ inventory_file }}"
+        insertbefore: "BOF"
+        line: "{{ oizone['name'] }}.{{ oizone['sysding']['ip']['dns']['domain'] }}"
+      when:
+        - oizone['updateinventory'] is defined
+        - oizone['updateinventory']
+      
+  rescue:   # in case something wents wrong above, we do housekeeping here
+    - name: ATTENTION
+      debug:
+        msg: "failed to install {{ oizone['name'] }}, rolling back"
+    - name: delete zone
+      solaris_zone:
+        name: "{{ oizone['name'] }}"
+        state: absent
+        path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
+
+    - name: delete VNICs
+      dladm_vnic:
+        name: "{{ item['logical'] }}"
+        link: "{{ item['physical'] }}"
+        state: absent
+      loop: "{{ oizone['nics'] }}"
+        
+    - name: delete filesystems
+      zfs:
+        name: "{{ item['path'] }}"
+        state: absent
+        extra_zfs_properties: "{{ item['extra_zfs_properties'] }}"
+      loop: "{{ oizone['filesystems'] }}"
+      when: item['zfscreate']
+        
