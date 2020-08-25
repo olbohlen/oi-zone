@@ -18,44 +18,52 @@ Role Variables
 You need to create a data structure called "oizone". The mandatory minimum is shown here:
 ``
 oizone:
-  name: myzone
-  zoneroot: /export/zones/
-  filesystems:
-    - path: rpool/export/zones/myzone
-      type: zoneroot
-      zfscreate: true
-      zfs_extra_properties:
-        mountpoint: /export/zones/myzone
-  nics:
-    - physical: ixgbe0
-      logical: myzone0
-      address: 10.23.42.23/24
-      addrsuffix: v4
-  sysding:
-    timezone: UTC
-    locale: C
-    ip:
-      routes:
-        - target: default # can be a CIDR or a host ip or "default"
-          router: 10.23.42.1 # IP of the router
-      dns:
-        nameservers:
+  name: samplezone                             # name of the zone
+  zoneroot: /export/zones/                     # basedir for zoneroot
+  brand: ipkg                                  # which brand does the zone shall have
+  #uninstall: true                             # if set to true, we will remove all we would create
+  updateinventory: true                        # will put the new zone on the first line of your local inventory
+  autoboot: "true"                             # shall the zone boot upon system boot
+  iptype: exclusive                            # exclusive-ip or shared-ip zone
+  filesystems:                                 # list of filesystems, zoneroot is mandatory
+    - path: rpool/export/zones/samplezone      # dataset for zoneroot
+      type: zoneroot                           # type can be: zoneroot, dataset (add zfs dataset), lofs (mount loopback), volume (map a device)
+      zfscreate: true                          # shall the role create this for you?
+      extra_zfs_properties:                    # extra zfs parameters, see ansible-doc zfs
+        mountpoint: /export/zones/samplezone   # ensure providing the correct mountpoint
+  nics:                                        # list of NICs for the zone
+    - physical: oce0                           # physical interface of the host
+      logical: samplezone0                     # name of the VNIC
+      address: 172.18.1.199/22                 # IPaddr/CIDR
+      addrsuffix: v4                           # address suffix for ipadm
+  sysding:                                     # needed parameters for the sysding(1M) file
+    timezone: CET                              # which timezone shall the zone be in
+    locale: de_DE.UTF-8                        # any special locale?
+    ip:                                        # IP configuration
+      routes:                                  # list of routes
+        - target: default                      # can be a CIDR or a host ip or "default"
+          router: 172.18.0.200                 # IP of the router
+      dns:                                     # DNS settings
+        nameservers:                           # list of nameservers
           - 1.1.1.1
-          - 8.8.8.8
-        search:
+	  - 8.8.8.8
+        search:                                # DNS search list
           - example.com
           - openindiana.org
-        domain: example.com
-    users:
-      - name: root
-        hashedpassword: "$5$foobar...."
-      - name: localadm
-        uid: 100
+        domain: notebook.lan                   # local DNS domain
+    users:                                     # list of users to be created
+      - name: root                             # root is mandatory, only specify
+        hashedpassword: "$5$..."               # hashedpassword here, everything else is pre-defined
+      - name: localadm                         # new user "localadm"
+        uid: 100                               
         gid: 10
         shell: /usr/bin/bash
         gecos: "Local Admin Account"
         home: /export/home/localadm
-        hashedpassword: "$5$barfoo...."
+        sudoers: "localadm ALL=(ALL) NOPASSWD: ALL"  # line to be added to sudoers
+        hashedpassword: "$5$..."               # hashed password
+        authorized_key: "ssh-rsa ..."          # ssh public key to be added to authorized_keys
+
 ``
 
 A set of all possible attributes is here:
@@ -63,7 +71,8 @@ A set of all possible attributes is here:
 ``
 oizone:
   name: oizone
-  updateinventory: true # adds zone on top of your inventory
+  updateinventory: true
+  #uninstall: true
   zoneroot: /export/zones/
   autoboot: "true"
   bootargs: # -v
@@ -79,18 +88,18 @@ oizone:
     - path: rpool/export/zones/oizone
       type: zoneroot
       zfscreate: true
-      zfs_extra_properties:
+      extra_zfs_properties:
         refquota: 10G
 	mountpoint: /export/zones/oizone
     - path: apppool/oizone/datavol1
       type: volume
       zfscreate: true
-      zfs_extra_properties:
+      extra_zfs_properties:
         volsize: 5G
     - path: apppool/oizone/dataset1
       type: dataset
       zfscreate: true
-      zfs_extra_properties:
+      extra_zfs_properties:
         quota: 2G
     - path: /disk1
       type: lofs
