@@ -32,13 +32,19 @@
         extra_zfs_properties: "{{ item['extra_zfs_properties'] }}"
       loop: "{{ oizone['filesystems'] }}"
       when: item['zfscreate']
-  
+
+    - name: is the zone already there?
+      shell: zoneadm -z {{ oizone['name'] }} list
+      register: zoneout
+      changed_when: false
+      ignore_errors: true
+      
     - name: set up VM zones for master
       solaris_zone:
         name: "{{ oizone['name'] }}"
         state: installed
         path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
-        install_options: "-e pkg:/security/sudo"
+        install_options: "-e pkg:/security/sudo -e runtime/python-27"
         config: >
           set brand={{ oizone['brand'] }};
           set autoboot={{ oizone['autoboot'] }};
@@ -114,7 +120,8 @@
           set value="{{ oizone['ram'] }}";
           end;
           {% endif %}
-
+      when: zoneout.rc == 1
+      
     - name: create a sysding.conf
       template:
         dest: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}/root/etc/sysding.conf"
