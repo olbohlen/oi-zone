@@ -16,7 +16,7 @@ Role Variables
 --------------
 
 You need to create a data structure called "oizone". The mandatory minimum is shown here:
-``
+```
 oizone:
   name: samplezone                             # name of the zone
   zoneroot: /export/zones/                     # basedir for zoneroot
@@ -64,11 +64,11 @@ oizone:
         hashedpassword: "$5$..."               # hashed password
         authorized_key: "ssh-rsa ..."          # ssh public key to be added to authorized_keys
 
-``
+```
 
 A set of all possible attributes is here:
 
-``
+```
 oizone:
   name: oizone
   updateinventory: true
@@ -142,7 +142,7 @@ oizone:
         gecos: "Local Admin Account"
         home: /export/home/localadm
         hashedpassword: "$5$barfoo...."
-``
+```
 
 Dependencies
 ------------
