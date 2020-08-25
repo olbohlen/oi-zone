@@ -39,7 +39,7 @@
       changed_when: false
       ignore_errors: true
       
-    - name: set up VM zones for master
+    - name: set up zone
       solaris_zone:
         name: "{{ oizone['name'] }}"
         state: installed
