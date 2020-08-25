@@ -2,6 +2,14 @@
 # tasks file for oi-zone
 - name: creating zone for you
   block:
+    # jump into rescue if we want to uninstall
+    - name: check for uninstall
+      fail:
+        msg: "uninstall is set to true, deleting resources"
+      when:
+        - oizone['uninstall'] is defined
+        - oizone['uninstall']
+        
     - name: create VNICs with VLAN
       dladm_vnic:
         name: "{{ item['logical'] }}"
@@ -30,6 +38,7 @@
         name: "{{ oizone['name'] }}"
         state: installed
         path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
+        install_options: "-e pkg:/security/sudo"
         config: >
           set brand={{ oizone['brand'] }};
           set autoboot={{ oizone['autoboot'] }};

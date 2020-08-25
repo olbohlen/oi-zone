@@ -16,6 +16,9 @@ echo "{{ user['authorized_key'] }}" > "{{ user['home'] }}/.ssh/authorized_keys"
 {% endif %}
 chown -R {{ user['name'] }}:{{ user['gid'] }} {{ user['home'] }}
 {% endif %}
+{% if user['sudoers'] is defined %}
+echo "{{ user['sudoers'] }}" >/etc/sudoers.d/"{{ user['name'] }}"
+{% endif %}
 setup_user_password {{ user['name'] }} '{{ user["hashedpassword"] }}'
 {% endfor %}
 
