@@ -44,7 +44,7 @@
         name: "{{ oizone['name'] }}"
         state: installed
         path: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}"
-        install_options: "-e pkg:/security/sudo -e runtime/python-27"
+        install_options: "{% if oizone['brand'] == 'kvm' %}{% else %}-e pkg:/security/sudo -e runtime/python-27{% endif %}"
         config: >
           set brand={{ oizone['brand'] }};
           set autoboot={{ oizone['autoboot'] }};
@@ -88,7 +88,7 @@
           set special={{ dataset['path'] }};
           set dir={{ dataset['mountpoint'] }};
           set type="lofs";
-          {% for option in database['options'] %}
+          {% for option in dataset['options'] %}
           add options {{ option }};
           {% endfor %}
           end;
@@ -104,6 +104,7 @@
           set name="bootorder";
           set type="string";
           set value="{{ oizone['kvm']['bootorder'] }}";
+          end;
           add attr;
           set name="vnc";
           set type="string";
@@ -119,14 +120,24 @@
           set type="string";
           set value="{{ oizone['ram'] }}";
           end;
+          {% for dataset in oizone['filesystems'] %}
+          {% if dataset['kvmlabel'] is defined %}
+          add attr;
+          set name="{{ dataset['kvmlabel'] }}";
+          set type="string";
+          set value="{{ dataset['path'] }}";
+          end;
+          {% endif %}
+          {% endfor %}
           {% endif %}
       when: zoneout.rc == 1
-      
+
     - name: create a sysding.conf
       template:
         dest: "{{ oizone['zoneroot'] }}/{{ oizone['name'] }}/root/etc/sysding.conf"
         src: sysding.j2
         mode: 0400
+      when: oizone['sysding'] is defined
 
     - name: boot zone
       solaris_zone:
